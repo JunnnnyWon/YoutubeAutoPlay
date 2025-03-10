@@ -2,7 +2,6 @@ import streamlit as st
 import uuid
 import time
 from datetime import datetime, timedelta
-import base64
 import logging
 import os
 import json
@@ -13,14 +12,6 @@ from scheduler import YouTubeScheduler
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# 알림음 파일 생성 (없을 경우)
-def generate_audio_files():
-    if not os.path.exists("notification.wav"):
-        # 간단한 삐 소리 파일 생성 (base64로 인코딩된 작은 WAV 파일)
-        audio_data = "UklGRpQDAABXQVZFZm10IBAAAAABAAEARKwAAESsAAABAAgAZGF0YXADAAAAAAAAAAAAAAAAgH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gH+Af4B/gA=="
-        with open("notification.wav", "wb") as f:
-            f.write(base64.b64decode(audio_data))
 
 # 알림 히스토리 저장/로드 함수
 def save_notifications():
@@ -45,9 +36,6 @@ def load_notifications():
     except Exception as e:
         logger.error(f"알림 로드 중 오류: {str(e)}")
 
-# 알림음 파일 생성
-generate_audio_files()
-
 # 페이지 설정
 st.set_page_config(
     page_title="유튜브 자동 스트리밍 시스템",
@@ -66,12 +54,6 @@ if 'notifications' not in st.session_state:
 
 if 'error_logs' not in st.session_state:
     st.session_state.error_logs = []
-
-if 'play_sound' not in st.session_state:
-    st.session_state.play_sound = False
-
-if 'sound_enabled' not in st.session_state:
-    st.session_state.sound_enabled = True
 
 if 'last_update_time' not in st.session_state:
     st.session_state.last_update_time = datetime.now()
@@ -92,20 +74,11 @@ def process_notifications():
     notifications = st.session_state.scheduler.get_notifications()
     
     if notifications:
-        play_sound = False
-        
         for notification in notifications:
             if notification["type"] == "error":
                 st.session_state.error_logs.append(notification)
             else:
                 st.session_state.notifications.append(notification)
-            
-            # 알림음 재생 트리거
-            if st.session_state.sound_enabled:
-                play_sound = True
-        
-        if play_sound and os.path.exists("notification.wav"):
-            st.session_state.play_sound = True
             
             # 알림 효과 추가 - 이 부분은 Streamlit 스레드에서 실행되어야 함
             try:
@@ -118,13 +91,6 @@ def process_notifications():
 
 # 알림 처리 호출
 process_notifications()
-
-# 알림음 재생
-if st.session_state.play_sound:
-    audio_file = open("notification.wav", "rb")
-    audio_bytes = audio_file.read()
-    st.audio(audio_bytes, format='audio/wav', start_time=0)
-    st.session_state.play_sound = False
 
 # 메인 레이아웃
 col1, col2 = st.columns([2, 3])
@@ -207,7 +173,7 @@ with col1:
                     if success:
                         st.success(message)
                         time.sleep(1)
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.error(message)
                         st.session_state.error_logs.append({
@@ -222,29 +188,43 @@ with col1:
 with col2:
     st.header("로그 및 알림")
     
-    # 알림 설정
-    st.subheader("알림 설정")
-    sound_enabled = st.checkbox("알림 소리 활성화", value=st.session_state.sound_enabled)
-    st.session_state.sound_enabled = sound_enabled
-    
-    # 오류 로그
-    st.subheader("오류 로그")
+    # 오류 로그 (클리어 버튼 추가)
+    log_col1, log_col2 = st.columns([3, 1])
+    with log_col1:
+        st.subheader("오류 로그")
+    with log_col2:
+        if st.button("로그 지우기", key="clear_error_logs"):
+            st.session_state.error_logs = []
+            save_notifications()
+            st.success("오류 로그가 삭제되었습니다.")
+            st.rerun()
+
     if not st.session_state.error_logs:
         st.info("오류 로그가 없습니다.")
     else:
-        for log in reversed(st.session_state.error_logs[-10:]):  # 최근 10개만 표시
+        for log in reversed(st.session_state.error_logs[-10:]):
             st.error(f"**{log['time']}**: {log['message']}")
     
-    # 알림 히스토리
-    st.subheader("알림 히스토리")
+    # 알림 히스토리 (클리어 버튼 추가)
+    notif_col1, notif_col2 = st.columns([3, 1])
+    with notif_col1:
+        st.subheader("알림 히스토리")
+    with notif_col2:
+        if st.button("알림 지우기", key="clear_notifications"):
+            st.session_state.notifications = []
+            save_notifications()
+            st.success("알림 히스토리가 삭제되었습니다.")
+            st.rerun()
+
     if not st.session_state.notifications:
         st.info("알림 히스토리가 없습니다.")
     else:
-        for notification in reversed(st.session_state.notifications[-10:]):  # 최근 10개만 표시
+        for notification in reversed(st.session_state.notifications[-10:]):
             if notification["type"] == "start":
                 st.success(f"**{notification['time']}**: 작업 {notification['job_id']} 시작됨")
             elif notification["type"] == "end":
                 st.info(f"**{notification['time']}**: 작업 {notification['job_id']} 종료됨")
+
 
 # 사이드바 - 다음 예정 작업 표시
 st.sidebar.header("다음 예정 작업")
@@ -296,10 +276,9 @@ if time_diff.total_seconds() >= 3:
     update_next_job()
     st.session_state.last_update_time = now
 
-# 앱 종료 시 리소스 정리 (오류 수정)
+# 앱 종료 시 리소스 정리
 def cleanup():
     try:
-        # st.session_state 직접 접근 대신 조건문으로 안전하게 처리
         scheduler = getattr(st.session_state, 'scheduler', None)
         if scheduler:
             scheduler.shutdown()
@@ -308,12 +287,4 @@ def cleanup():
         if browser_controller and hasattr(browser_controller, 'driver') and browser_controller.driver:
             browser_controller.close_browser()
     except Exception as e:
-        # 콘솔에만 로그 출력 (Streamlit 함수 사용 안함)
         print(f"Cleanup error: {str(e)}")
-
-# 종료 핸들러 등록 (간소화)
-try:
-    import atexit
-    atexit.register(cleanup)
-except Exception as e:
-    print(f"Failed to register cleanup handler: {str(e)}")

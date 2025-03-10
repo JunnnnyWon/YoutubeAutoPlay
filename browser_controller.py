@@ -7,6 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import logging
 import time
+import os
 
 class YouTubeBrowserController:
     def __init__(self):
@@ -18,29 +19,41 @@ class YouTubeBrowserController:
         try:
             chrome_options = Options()
             chrome_options.add_argument("--window-position=0,0")
-            chrome_options.add_argument("--window-size=1,1")
-            
-            # ChromeDriver 관련 설정 수정
-            service = Service()  # ChromeDriverManager().install() 사용하지 않음
-            self.driver = webdriver.Chrome(options=chrome_options)
+            chrome_options.add_argument("--window-size=800,600")  # 창 크기 약간 키움
+
+            # 자동화 감지 우회 설정
+            chrome_options.add_argument("--disable-infobars")
+            chrome_options.add_argument("--disable-popup-blocking")
+            chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option("useAutomationExtension", False)
+            chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+
+            # uBlock Origin 확장 프로그램 추가 - 드라이버 생성 전에 추가
+            extension_path = os.path.join(os.path.dirname(__file__), "ublock_origin.crx")
+            if os.path.exists(extension_path):
+                try:
+                    chrome_options.add_extension(extension_path)
+                    self.logger.info("uBlock Origin 확장 프로그램이 추가되었습니다.")
+                except Exception as e:
+                    self.logger.error(f"확장 프로그램 추가 실패: {str(e)}")
+            else:
+                self.logger.warning(f"uBlock Origin 확장 프로그램 파일을 찾을 수 없습니다: {extension_path}")
+
+            # ChromeDriver 관련 설정 및 드라이버 생성
+            service = Service()  # 또는 Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+
+            # 자동화 감지 우회 스크립트 실행
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+            self.driver.get("https://www.youtube.com")  # 유튜브 접속
+            time.sleep(5)  # 페이지 로딩 대기
+
+            # 유튜브 URL로 이동
             self.driver.get(url)
             
-            # 유튜브 재생 버튼 클릭
-            WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "button.ytp-play-button"))
-            ).click()
-            
-            # 음소거 해제 (유튜브가 기본적으로 음소거일 수 있음)
-            time.sleep(2)  # 페이지 로딩 기다리기
-            try:
-                mute_button = WebDriverWait(self.driver, 10).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, "button.ytp-mute-button"))
-                )
-                if "음소거 해제" in mute_button.get_attribute("title") or "Unmute" in mute_button.get_attribute("title"):
-                    mute_button.click()
-            except Exception as e:
-                self.logger.warning(f"음소거 버튼 관련 오류: {str(e)}")
-                
             return True, "브라우저가 성공적으로 시작되었습니다."
         except Exception as e:
             error_msg = f"브라우저 시작 중 오류 발생: {str(e)}"
