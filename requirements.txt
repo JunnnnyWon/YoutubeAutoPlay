@@ -1,0 +1,9 @@
+streamlit==1.28.0
+selenium==4.10.0
+webdriver_manager==3.8.6
+apscheduler==3.10.1
+python-dateutil==2.8.2
+pytz==2023.3
+requests==2.31.0
+pillow==10.0.0
+pydub==0.25.1
